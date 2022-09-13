@@ -1,0 +1,13 @@
+[package]
+name = "systemtest"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+subprocess = "0.2.9"
+tokio = { version = "1.21.2", features = ["full"] }
+rand = "0.8.5"
+env_logger = "*"
+log = "*"
