@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use druid::ExtEventSink;
-use log::debug;
+use log::{debug, info};
 use tokio::{
     select,
     sync::{mpsc, oneshot},
@@ -111,6 +111,7 @@ pub async fn controller_loop(
     // let mut next_p_move_rx: Option<oneshot::Receiver<PlayerMoveMsg>> = None;
     let mut players = PlayerTable::new();
     let mut controller_info = ControllerInfo::default();
+    ui_sender.send_new_state(dyn_clone::clone_box(&*game));
 
     loop {
         let event = if let Some(p_move_rx) = &mut p_move_rx {
@@ -132,7 +133,7 @@ pub async fn controller_loop(
                 None => Event::ReceiveReturnedNone,
             }
         };
-        debug!("Event: {:?}", event);
+        info!("Event: {:?}", event);
 
         match event {
             Event::ControllerMsg(ControllerMsg::ImConnected(name, tx)) => {
@@ -178,14 +179,27 @@ pub async fn controller_loop(
                 controller_info.windelay = delay
             }
             Event::Move(player_move) => {
-                match player_moves(&mut game, &mut controller_info, &mut players, player_move).await
+                let player = &player_info_to_user(players.current().unwrap());
+
+                let move_result = game.player_moves(player, player_move.mov);
+                ui_sender.send_new_state(dyn_clone::clone_box(&*game));
+                match react_to_player_move(
+                    move_result,
+                    &mut game,
+                    &mut controller_info,
+                    &mut players,
+                    player_move.move_err_tx,
+                )
+                .await
                 {
-                    PlayerMovesReturn::None => (),
+                    PlayerMovesReturn::None => {
+                        // No more players, or suddenly gating
+                        p_move_rx = None;
+                    }
                     PlayerMovesReturn::NextMoveReceiver(receiver) => {
                         p_move_rx = Some(receiver);
                     }
                     PlayerMovesReturn::GameOver => {
-                        ui_sender.send_new_state(dyn_clone::clone_box(&*game));
                         tokio::time::sleep(controller_info.windelay).await;
                         p_move_rx =
                             first_move_new_game(&mut game, &mut controller_info, &mut players)
@@ -199,7 +213,6 @@ pub async fn controller_loop(
                 p_move_rx = your_turn(&mut players, &mut game, &controller_info).await;
             }
         }
-        ui_sender.send_new_state(dyn_clone::clone_box(&*game));
         controller_info.connected_users = players.iter().map(player_info_to_user).collect();
         ui_sender.send_controller_info(&controller_info);
     }
@@ -264,6 +277,44 @@ async fn first_move_new_game(
     your_turn(players, game, controller_info).await
 }
 
+async fn react_to_player_move(
+    player_move_result: PlayerMoveResult,
+    game: &mut Box<dyn GameTrait>,
+    controller_info: &mut ControllerInfo,
+    players: &mut PlayerTable,
+    move_err_tx: oneshot::Sender<messages::ToClient>,
+) -> PlayerMovesReturn {
+    match player_move_result {
+        PlayerMoveResult::Ok => {
+            players.advance_player();
+            your_turn(players, game, controller_info).await.into()
+        }
+        PlayerMoveResult::Draw => {
+            debug!("Game over, draw");
+            announce_draw(players).await;
+            PlayerMovesReturn::GameOver
+        }
+        PlayerMoveResult::Win => {
+            debug!("Game over, win");
+            announce_winner(players).await;
+            controller_info.add_player_win(&players.current().unwrap().name);
+            PlayerMovesReturn::GameOver
+        }
+        PlayerMoveResult::InvalidMove => {
+            debug!("Invalid move from player");
+            move_err_tx.send(messages::INVALID_MOVE).unwrap();
+            players.remove_current();
+            your_turn(players, game, controller_info).await.into()
+        }
+        PlayerMoveResult::InvalidFormat => {
+            debug!("Invalid move format");
+            move_err_tx.send(messages::INVALID_MESSAGE_FORMAT).unwrap();
+            players.remove_current();
+            your_turn(players, game, controller_info).await.into()
+        }
+    }
+}
+
 async fn player_moves(
     game: &mut Box<dyn GameTrait>,
     controller_info: &mut ControllerInfo,
@@ -278,20 +329,24 @@ async fn player_moves(
             your_turn(players, game, controller_info).await.into()
         }
         PlayerMoveResult::Draw => {
+            debug!("Game over, draw");
             announce_draw(players).await;
             PlayerMovesReturn::GameOver
         }
         PlayerMoveResult::Win => {
+            debug!("Game over, win");
             announce_winner(players).await;
             controller_info.add_player_win(&players.current().unwrap().name);
             PlayerMovesReturn::GameOver
         }
         PlayerMoveResult::InvalidMove => {
+            debug!("Invalid move from player");
             move_err_tx.send(messages::INVALID_MOVE).unwrap();
             players.remove_current();
             your_turn(players, game, controller_info).await.into()
         }
         PlayerMoveResult::InvalidFormat => {
+            debug!("Invalid move format");
             move_err_tx.send(messages::INVALID_MESSAGE_FORMAT).unwrap();
             players.remove_current();
             your_turn(players, game, controller_info).await.into()
