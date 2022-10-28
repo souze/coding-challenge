@@ -238,7 +238,7 @@ impl TestDriver {
 
     async fn internal_receive(&mut self, user: &mut TestUser, expected: ExpectData) {
         self.last_operation = ReadOrSend::Read;
-        match tokio::time::timeout(std::time::Duration::from_millis(500), user.rx.recv()).await {
+        match tokio::time::timeout(std::time::Duration::from_millis(1000), user.rx.recv()).await {
             Ok(Some(NetworkInteraction::Sending(actual_data))) => match expected {
                 ExpectData::String(str) => assert_eq!(actual_data, str + "\n"),
                 ExpectData::Anything => (),
