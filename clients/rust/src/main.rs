@@ -18,10 +18,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let args = Args::parse();
 
-    let mut stream = BufStream::new(TcpStream::connect("localhost:7654").await?);
+    let mut stream = BufStream::new(TcpStream::connect("192.168.25.176:7654").await?);
 
     let auth = serde_json::to_string(&ToServer::Auth(Auth {
-        username: args.username.unwrap_or("zuzu".to_string()),
+        username: args.username.unwrap_or("bot".to_string()),
         password: "kermit".to_string(),
     }))
     .unwrap()

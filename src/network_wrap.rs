@@ -150,10 +150,17 @@ pub struct RealStream {
 impl Stream for RealStream {
     async fn read_line(&mut self) -> Result<String, Error> {
         let mut line = String::new();
-        match self.inner.read_line(&mut line).await {
-            Ok(0) => Err(Error::ConnectionClosed),
-            Err(_) => Err(Error::Custom("Whoopsie".to_string())),
-            Ok(_) => Ok(line),
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(2000),
+            self.inner.read_line(&mut line),
+        )
+        .await
+        {
+            // match self.inner.read_line(&mut line).await {
+            Ok(Ok(0)) => Err(Error::ConnectionClosed),
+            Ok(Err(_)) => Err(Error::Custom("Whoopsie".to_string())),
+            Ok(Ok(_)) => Ok(line),
+            Err(_) => Err(Error::Custom("Timout".to_string())),
         }
     }
 
