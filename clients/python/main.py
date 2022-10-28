@@ -1,7 +1,7 @@
 from socket import socket, SocketType, AF_INET, SOCK_STREAM
 import json
 
-SERVER_IP = "localhost"
+SERVER_IP = "192.168.25.121"
 SERVER_PORT = 7654
 
 def main():

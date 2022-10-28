@@ -11,6 +11,8 @@ The game ends when one player has 5 connecting pieces, either diagonally or orto
 
 ### Game state
 
+> Server -> Client
+
 ```json
 {"cells":[{"occupied":name|"empty"}],"width":width,"height":height}
 ```
@@ -34,3 +36,16 @@ _|_|o
 ```json
 {"cells":[{"occupied":"erik"},"empty", {"occupied":"simon"},{"occupied":"erik"},{"occupied":"octopus"},"empty","empty","empty",{"occupied": "octopus"}],"width":3,"height":3}
 ```
+
+
+### Your move
+
+# Client -> Server
+
+```json
+{"move": {"x": x, "y": y}}
+```
+
+Where
+ * *x* is the x coordinate of the piece you want to place
+ * *y* is the y coordinate of the piece you want to place
