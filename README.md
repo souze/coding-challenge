@@ -20,17 +20,23 @@ Prerequisites: rust
 
 ## How to solve a challenge
 
-Start from scratch, or use one of the sample starters in sample-clients/ directory.
+Start from scratch, or use one of the sample starters below.
+
+* https://github.com/souze/code-challenge-python-client-skeleton
 
 For the participants, every challenge has roughly the same structure.
 
 1. Connect to the server (The host should have provided you with IP:port)
 2. Provide a username (See [authentication message](#auth) below)
-3. The server will send the state of the world [your turn](#your-turn)
-4. The client will answer with their next move [player moves](#player-move)
-5. Repeat from step 3
-6. The server will announce a winner when the game is over [game ends](#game-over)
-7. Repeat from step 3
+3. ╭─╭─ The server will send the state of the world [your turn](#your-turn)
+4. | |  The client will answer with their next move [player moves](#player-move)
+5. | ╰─ Repeat from step 3
+6. |  The server will announce a winner when the game is over [game ends](#game-over)
+7. ╰─ Repeat from step 3
+
+For specifics on your particular game, go to the game-specific section here:
+
+* [gomoku](src/games/gomoku.md)
 
 # Protocoll
 

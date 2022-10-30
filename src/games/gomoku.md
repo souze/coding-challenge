@@ -4,7 +4,7 @@
 
 The game consists of a limited grid (say 50x50 squares). Each player takes turn to place one of their own pieces. You can only place your piece on an empty spot.
 
-The game ends when one player has 5 connecting pieces, either diagonally or ortogonally. The game also ends of the board is filled with pieces but no player has won (draw).
+The game ends when one player has 5 connecting pieces, horizontal, vertical, or diagonal. The game also ends of the board is filled with pieces but no player has won (draw).
 
 
 ## Protocol
