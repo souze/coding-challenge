@@ -164,7 +164,8 @@ impl gametraits::GameTrait for Game {
         let cell_width = (ctx.size().width / self.board.width as f64)
             .min(ctx.size().height / self.board.height as f64);
 
-        let cell_size: (f64, f64) = (cell_width, cell_width);
+        const CELL_SPACING: f64 = 2_f64;
+        let cell_size: (f64, f64) = (cell_width - CELL_SPACING, cell_width - CELL_SPACING);
         let c_empty = Color::rgb8(0xFF, 0xFF, 0xFF);
         for x in 0..self.board.width {
             for y in 0..self.board.height {

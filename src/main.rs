@@ -17,7 +17,7 @@ use tokio::sync::mpsc;
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    let listener = network_wrap::bind("192.168.25.176:7654").await.unwrap();
+    let listener = network_wrap::bind("127.0.0.1:7654").await.unwrap();
 
     let controller_channel = mpsc::channel::<ControllerMsg>(1024);
     let ui_handle = start_ui(controller_channel.0.clone()).await;
@@ -26,7 +26,7 @@ async fn main() {
         listener,
         UiSender::Real(ui_handle),
         controller_channel,
-        || games::gomoku::make_ptr(5, 5),
+        || games::gomoku::make_ptr(15, 15),
     )
     .await;
 }

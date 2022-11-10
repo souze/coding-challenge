@@ -315,45 +315,6 @@ async fn react_to_player_move(
     }
 }
 
-async fn player_moves(
-    game: &mut Box<dyn GameTrait>,
-    controller_info: &mut ControllerInfo,
-    players: &mut PlayerTable,
-    PlayerMoveMsg { mov, move_err_tx }: PlayerMoveMsg,
-) -> PlayerMovesReturn {
-    let player = &player_info_to_user(players.current().unwrap());
-
-    match game.player_moves(player, mov) {
-        PlayerMoveResult::Ok => {
-            players.advance_player();
-            your_turn(players, game, controller_info).await.into()
-        }
-        PlayerMoveResult::Draw => {
-            debug!("Game over, draw");
-            announce_draw(players).await;
-            PlayerMovesReturn::GameOver
-        }
-        PlayerMoveResult::Win => {
-            debug!("Game over, win");
-            announce_winner(players).await;
-            controller_info.add_player_win(&players.current().unwrap().name);
-            PlayerMovesReturn::GameOver
-        }
-        PlayerMoveResult::InvalidMove => {
-            debug!("Invalid move from player");
-            move_err_tx.send(messages::INVALID_MOVE).unwrap();
-            players.remove_current();
-            your_turn(players, game, controller_info).await.into()
-        }
-        PlayerMoveResult::InvalidFormat => {
-            debug!("Invalid move format");
-            move_err_tx.send(messages::INVALID_MESSAGE_FORMAT).unwrap();
-            players.remove_current();
-            your_turn(players, game, controller_info).await.into()
-        }
-    }
-}
-
 async fn your_turn(
     players: &mut PlayerTable,
     game: &mut Box<dyn GameTrait>,
