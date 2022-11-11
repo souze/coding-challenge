@@ -174,7 +174,7 @@ mod test {
         assert_eq!(p.current().unwrap().name, "3");
         p.remove_player("3");
         assert_eq!(p.current().unwrap().name, "4");
-        p.add_new_player(n(), tx.clone());
+        p.add_new_player(n(), tx);
         assert_eq!(p.current().unwrap().name, "4");
         p.advance_player();
         assert_eq!(p.current().unwrap().name, "5");

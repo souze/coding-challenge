@@ -208,7 +208,7 @@ impl gametraits::GameTrait for Game {
                 .unwrap();
             ctx.draw_text(&layout, (100.0, 25.0));
         } else if self.board.is_full() {
-            let draw_text = format!("Draw!");
+            let draw_text = "Draw!".to_string();
             let text = ctx.text();
             let layout = text
                 .new_text_layout(draw_text)
@@ -254,14 +254,10 @@ fn make_move(state: &mut Game, user: &User, p_move: PlayerMove) -> PlayerMoveRes
     }
 }
 
+#[cfg(test)]
 mod test {
-    #[allow(unused_imports)]
-    use crate::gametraits::PlayerMoveResult;
-
-    #[allow(unused_imports)]
     use super::*;
-
-    #[allow(unused_macros)]
+    use crate::gametraits::PlayerMoveResult;
     macro_rules! test_init {
         ($game:ident, $p1:ident, $p2:ident, $p3:ident, $mov_ok:ident) => {
             let mut $game = Game::new(10, 10);
