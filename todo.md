@@ -1,12 +1,9 @@
-* Fullscreen UI
-    * Scale board?
-* Player color in names
+# Game decides player order
+
 
 
 -- Later?
-* Game settings
-    * Board size
-* Controller info in UI
-    * Registered users
-* Controller actions from UI
-    * Remove user
+* Game settings in UI
+    * Have some kind of general type that represents game starting data, that can be converted to ui elements
+* More info in UI
+    * Current player

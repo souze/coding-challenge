@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::messages;
 
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PlayerGameState {
     pub serialized: String,
 }
@@ -31,11 +31,13 @@ pub fn to_player_move<'a, MoveType: Deserialize<'a>>(p_move: &'a PlayerMove) -> 
 }
 
 pub trait GameTrait: dyn_clone::DynClone + Send + Debug {
-    fn player_moves(&mut self, user: &User, player_move: PlayerMove) -> PlayerMoveResult;
+    fn player_moves(&mut self, turn_token: TurnToken, player_move: PlayerMove) -> PlayerMoveResult;
+    fn current_player_disconnected(&mut self, turn_token: TurnToken) -> Option<PlayerTurn>;
 
-    fn get_player_state(&self, user: &User) -> PlayerGameState;
+    fn try_start_game(&mut self) -> Option<PlayerTurn>;
 
-    fn reset(&mut self);
+    fn player_connected(&mut self, user: User);
+    fn player_disconnected(&mut self, user: &str);
 
     fn paint(&self, ctx: &mut druid::PaintCtx);
 
@@ -53,10 +55,21 @@ pub struct User {
 }
 
 #[derive(PartialEq, Eq, Debug)]
+pub struct PlayerTurn {
+    pub token: TurnToken,
+    pub state: PlayerGameState,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct TurnToken {
+    pub user: User,
+}
+
+#[derive(PartialEq, Eq, Debug)]
 pub enum PlayerMoveResult {
-    Ok,
+    Ok(PlayerTurn),
     Win,
     Draw,
-    InvalidMove,
-    InvalidFormat,
+    InvalidMove(Option<PlayerTurn>),
+    InvalidFormat(Option<PlayerTurn>),
 }

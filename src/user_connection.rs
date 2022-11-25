@@ -151,18 +151,18 @@ async fn process_user_connection(
 
         // Send player move to controller
         let (move_err_tx, move_err_rx) = oneshot::channel::<messages::ToClient>();
-        match move_tx.send(PlayerMoveMsg {
-            mov: player_move,
-            move_err_tx,
-        }) {
-            Ok(_) => {
-                if let Ok(err) = move_err_rx.await {
-                    write_json(&mut stream, err).await;
-                    return Err(MyErr::AnyHow("Move failure".to_string()));
-                }
+        if move_tx
+            .send(PlayerMoveMsg {
+                mov: player_move,
+                move_err_tx,
+            })
+            .is_ok()
+        {
+            if let Ok(err) = move_err_rx.await {
+                write_json(&mut stream, err).await;
+                return Err(MyErr::AnyHow("Move failure".to_string()));
             }
-            Err(_) => (), // My move was dropped, whatever
-        }
+        } // Else my move was dropped, whatever
     }
 }
 

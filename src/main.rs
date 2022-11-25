@@ -4,6 +4,7 @@ pub mod gametraits;
 pub mod messages;
 pub mod network_wrap;
 pub mod player_table;
+pub mod turn_tracker;
 pub mod ui;
 pub mod user_connection;
 
@@ -26,7 +27,7 @@ async fn main() {
         listener,
         UiSender::Real(ui_handle),
         controller_channel,
-        || games::gomoku::make_ptr(15, 15),
+        |players| games::gomoku::make_ptr(15, 15, players),
     )
     .await;
 }
@@ -60,17 +61,14 @@ async fn entry(
     user_connection::accept_connection_loop(listener, tx).await;
 }
 
+#[cfg(test)]
 mod test {
-    #[allow(unused_imports)]
-    use crate::network_wrap::{get_test_channel, NetworkInteraction};
+    use crate::network_wrap::get_test_channel;
 
-    #[allow(unused_imports)]
     use super::*;
 
-    #[allow(dead_code)]
     const JSON_BASIC_STATE: &str = r#"{"your-turn":{"num":0}}"#;
 
-    #[allow(dead_code)]
     async fn test_entry(fake_listener: impl network_wrap::Listener) {
         entry(
             fake_listener,
@@ -81,28 +79,25 @@ mod test {
         .await;
     }
 
-    #[allow(dead_code)]
     async fn test_entry_gomoko(fake_listener: impl network_wrap::Listener) {
         entry(
             fake_listener,
             UiSender::Fake,
             mpsc::channel::<ControllerMsg>(1024),
-            || games::gomoku::make_ptr(20, 20),
+            |players| games::gomoku::make_ptr(20, 20, players),
         )
         .await;
     }
 
-    #[allow(dead_code)]
     async fn test_entry_with_ui(fake_listener: impl network_wrap::Listener) {
         let (tx, rx) = mpsc::channel::<ControllerMsg>(1024);
         let sink = start_ui(tx.clone()).await;
-        entry(fake_listener, UiSender::Real(sink), (tx, rx), || {
-            games::gomoku::make_ptr(20, 20)
+        entry(fake_listener, UiSender::Real(sink), (tx, rx), |players| {
+            games::gomoku::make_ptr(20, 20, players)
         })
         .await;
     }
 
-    #[allow(dead_code)]
     fn login_msg(user: &str, pass: &str) -> String {
         r#"{"auth":{"username":""#.to_string() + user + r#"","password":""# + pass + r#""}}"#
     }
@@ -320,6 +315,7 @@ mod test {
 
     #[tokio::test]
     async fn two_players_passive_drops() {
+        env_logger::init();
         init_flow_test_spawn!(driver, test_entry);
 
         let mut user = driver.connect_user("user").await;

@@ -1,7 +1,8 @@
+use crate::{gametraits::TurnToken, turn_tracker::TurnTracker};
 use itertools::Itertools;
 use std::{any::Any, iter::repeat};
 
-use crate::gametraits::{self, GameTrait, PlayerMoveResult, User};
+use crate::gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, User};
 use druid::{
     kurbo::Line,
     piet::{Text, TextLayoutBuilder},
@@ -20,6 +21,7 @@ pub struct PlayerMove {
 pub struct Game {
     board: Board,
     winner: Option<(User, FirstAndLast)>,
+    players: TurnTracker,
 }
 
 #[derive(Clone, Serialize, Debug, PartialEq, Eq)]
@@ -131,7 +133,7 @@ enum PlaceResult {
 }
 
 impl Game {
-    fn new(w: usize, h: usize) -> Self {
+    fn new(w: usize, h: usize, players: Vec<User>) -> Self {
         Self {
             board: Board {
                 width: w,
@@ -139,6 +141,7 @@ impl Game {
                 cells: repeat(Cell::Empty).take(w * h).collect::<Vec<Cell>>(),
             },
             winner: None,
+            players: TurnTracker::new(players),
         }
     }
 }
@@ -146,19 +149,59 @@ impl Game {
 impl gametraits::GameTrait for Game {
     fn player_moves(
         &mut self,
-        user: &User,
+        token: TurnToken,
         player_move: gametraits::PlayerMove,
     ) -> PlayerMoveResult {
+        let user = &token.user;
         debug!("{user:?} made a move {player_move:?}");
         match gametraits::to_player_move::<PlayerMove>(&player_move) {
-            Some(mov) => make_move(self, user, mov),
-            None => PlayerMoveResult::InvalidFormat,
+            Some(mov) => match make_move(self, user, mov) {
+                InternalMoveResult::InvalidMove => {
+                    self.players.remove_player(&user.name);
+                    if let Some(p) = self.players.advance_player() {
+                        PlayerMoveResult::InvalidMove(Some(gametraits::PlayerTurn {
+                            token: TurnToken { user: p },
+                            state: gametraits::to_game_state(&self.board),
+                        }))
+                    } else {
+                        PlayerMoveResult::InvalidMove(None)
+                    }
+                }
+                InternalMoveResult::Ok => {
+                    let p = self.players.advance_player().unwrap();
+                    PlayerMoveResult::Ok(PlayerTurn {
+                        token: TurnToken { user: p },
+                        state: gametraits::to_game_state(&self.board),
+                    })
+                }
+                InternalMoveResult::Win => PlayerMoveResult::Win,
+                InternalMoveResult::Draw => PlayerMoveResult::Draw,
+            },
+            None => {
+                self.players.remove_player(&user.name);
+                if let Some(p) = self.players.advance_player() {
+                    PlayerMoveResult::InvalidFormat(Some(gametraits::PlayerTurn {
+                        token: TurnToken { user: p },
+                        state: gametraits::to_game_state(&self.board),
+                    }))
+                } else {
+                    PlayerMoveResult::InvalidFormat(None)
+                }
+            }
         }
     }
 
-    fn get_player_state(&self, _user: &User) -> gametraits::PlayerGameState {
-        gametraits::to_game_state(&self.board)
+    fn player_connected(&mut self, user: User) {
+        self.players.add_player(user);
     }
+
+    fn player_disconnected(&mut self, username: &str) {
+        self.players.remove_player(username);
+    }
+
+    // fn get_player_state(&self, _user: &User) -> gametraits::PlayerGameState {
+    //     gametraits::to_game_state(&self.board)
+    // }
 
     fn paint(&self, ctx: &mut druid::PaintCtx) {
         let cell_width = (ctx.size().width / self.board.width as f64)
@@ -228,28 +271,53 @@ impl gametraits::GameTrait for Game {
         self == other.as_any().downcast_ref::<Game>().unwrap()
     }
 
-    fn reset(&mut self) {
-        *self = Game::new(self.board.width, self.board.height);
+    fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
+        self.players.remove_player(&player_token.user.name);
+
+        match self.players.advance_player() {
+            None => None,
+            Some(user) => Some(PlayerTurn {
+                token: TurnToken { user },
+                state: gametraits::to_game_state(&self.board),
+            }),
+        }
+    }
+
+    fn try_start_game(&mut self) -> Option<PlayerTurn> {
+        Some(PlayerTurn {
+            token: TurnToken {
+                user: self.players.advance_player().unwrap(),
+            },
+            state: gametraits::to_game_state(&self.board),
+        })
     }
 }
 
-pub fn make_ptr(w: usize, h: usize) -> Box<dyn GameTrait> {
-    Box::new(Game::new(w, h))
+pub fn make_ptr(w: usize, h: usize, players: Vec<User>) -> Box<dyn GameTrait> {
+    Box::new(Game::new(w, h, players))
 }
 
-fn make_move(state: &mut Game, user: &User, p_move: PlayerMove) -> PlayerMoveResult {
+#[derive(Debug, PartialEq, Eq)]
+enum InternalMoveResult {
+    InvalidMove,
+    Ok,
+    Win,
+    Draw,
+}
+
+fn make_move(state: &mut Game, user: &User, p_move: PlayerMove) -> InternalMoveResult {
     match state.board.try_place(user, p_move.x, p_move.y) {
-        PlaceResult::InvalidMove => PlayerMoveResult::InvalidMove,
+        PlaceResult::InvalidMove => InternalMoveResult::InvalidMove,
         PlaceResult::Ok => {
             if state.board.is_full() {
-                PlayerMoveResult::Draw
+                InternalMoveResult::Draw
             } else {
-                PlayerMoveResult::Ok
+                InternalMoveResult::Ok
             }
         }
         PlaceResult::Win(coords) => {
             state.winner = Some((user.clone(), coords));
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         }
     }
 }
@@ -257,10 +325,9 @@ fn make_move(state: &mut Game, user: &User, p_move: PlayerMove) -> PlayerMoveRes
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::gametraits::PlayerMoveResult;
+
     macro_rules! test_init {
         ($game:ident, $p1:ident, $p2:ident, $p3:ident, $mov_ok:ident) => {
-            let mut $game = Game::new(10, 10);
             let $p1 = User {
                 name: "player1".to_string(),
                 color: Color::rgb8(0, 0, 0),
@@ -273,10 +340,11 @@ mod test {
                 name: "player3".to_string(),
                 color: Color::rgb8(200, 200, 200),
             };
+            let mut $game = Game::new(10, 10, vec![$p1.clone(), $p2.clone(), $p3.clone()]);
             let mut $mov_ok = |u, x, y| {
                 assert_eq!(
                     make_move(&mut $game, u, PlayerMove { x, y }),
-                    PlayerMoveResult::Ok
+                    InternalMoveResult::Ok
                 );
             };
         };
@@ -288,7 +356,7 @@ mod test {
         mov_ok(&p1, 9, 5);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 9, y: 5 }),
-            PlayerMoveResult::InvalidMove
+            InternalMoveResult::InvalidMove
         );
     }
 
@@ -305,7 +373,7 @@ mod test {
         mov_ok(&p2, 5, 9);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 9, y: 5 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         );
     }
 
@@ -324,7 +392,7 @@ mod test {
         mov_ok(&p1, 8, 0);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 9, y: 0 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         )
     }
 
@@ -338,7 +406,7 @@ mod test {
         mov_ok(&p1, 3, 0);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 4, y: 0 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         );
     }
 
@@ -352,7 +420,7 @@ mod test {
         mov_ok(&p1, 0, 3);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 0, y: 4 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         );
     }
 
@@ -366,7 +434,7 @@ mod test {
         mov_ok(&p1, 3, 3);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 4, y: 4 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         );
     }
 
@@ -386,7 +454,7 @@ mod test {
         mov_ok(&p1, 1, 4);
         assert_eq!(
             make_move(&mut game, &p1, PlayerMove { x: 0, y: 5 }),
-            PlayerMoveResult::Win
+            InternalMoveResult::Win
         );
     }
 }

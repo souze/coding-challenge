@@ -268,7 +268,7 @@ pub fn launch(
     info!("Final launch of UI");
     launcher
         .launch(AppData {
-            game_state: Box::new(crate::games::dumb::Game::default()),
+            game_state: crate::games::dumb::make_ptr(vec![]),
             what: 13,
             controller_settings: ControllerSettings::default(),
             connected_users: Vector::new(),
