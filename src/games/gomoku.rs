@@ -81,7 +81,7 @@ impl Board {
     }
 
     fn at(&self, x: i32, y: i32) -> Option<&Cell> {
-        if x < 0 || y < 0 || x >= (self.width as i32) || y >= (self.width as i32) {
+        if x < 0 || y < 0 || x >= (self.width as i32) || y >= (self.height as i32) {
             None
         } else {
             Some(&self.cells[(y as usize) * self.width + (x as usize)])
@@ -89,7 +89,7 @@ impl Board {
     }
 
     fn at_mut(&mut self, x: i32, y: i32) -> Option<&mut Cell> {
-        if x < 0 || y < 0 || x >= (self.width as i32) || y >= (self.width as i32) {
+        if x < 0 || y < 0 || x >= (self.width as i32) || y >= (self.height as i32) {
             None
         } else {
             Some(&mut self.cells[(y as usize) * self.width + (x as usize)])
