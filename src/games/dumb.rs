@@ -1,9 +1,11 @@
 use std::any::Any;
 
-use crate::{
-    gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User},
-    turn_tracker::TurnTracker,
+use code_challenge_game_types::gametraits::{
+    self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User,
 };
+
+use code_challenge_game_types::TurnTracker;
+
 use druid::{
     piet::{Text, TextLayoutBuilder},
     Color, FontFamily, RenderContext,

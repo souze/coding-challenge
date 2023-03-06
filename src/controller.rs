@@ -1,5 +1,9 @@
 use std::{collections::HashMap, time::Duration};
 
+use code_challenge_game_types::{
+    gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User},
+    messages::{self, ToClient},
+};
 use druid::ExtEventSink;
 use log::{debug, info};
 use tokio::{
@@ -8,8 +12,6 @@ use tokio::{
 };
 
 use crate::{
-    gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User},
-    messages::{self, ToClient},
     player_table::{PlayerInfo, PlayerTable},
     ui,
 };

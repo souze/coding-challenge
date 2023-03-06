@@ -11,8 +11,9 @@ use druid::{
 use log::info;
 use log::{debug, warn};
 
+use crate::controller;
 use crate::controller::{ControllerMsg, ControllerSender};
-use crate::{controller, gametraits};
+use code_challenge_game_types::gametraits;
 
 pub const UI_UPDATE_COMMAND: Selector<Box<dyn gametraits::GameTrait>> = Selector::new("ui_update");
 pub const UI_UPDATE_CONTROLLER_INFO_COMMAND: Selector<controller::ControllerInfo> =

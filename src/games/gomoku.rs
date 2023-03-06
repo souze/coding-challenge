@@ -1,8 +1,11 @@
-use crate::{gametraits::TurnToken, turn_tracker::TurnTracker};
 use itertools::Itertools;
 use std::{any::Any, iter::repeat};
 
-use crate::gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, User};
+use code_challenge_game_types::gametraits::{
+    self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User,
+};
+use code_challenge_game_types::TurnTracker;
+
 use druid::{
     kurbo::Line,
     piet::{Text, TextLayoutBuilder},

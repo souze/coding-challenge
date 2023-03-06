@@ -6,10 +6,11 @@ use std::{
 use log::debug;
 use tokio::sync::{mpsc, oneshot};
 
+use code_challenge_game_types::gametraits;
+use code_challenge_game_types::messages::{self, Auth, GameOver, ToClient};
+
 use crate::{
     controller::{ControllerMsg, ControllerToPlayerMsg, GameOverReason, PlayerMoveMsg},
-    gametraits,
-    messages::{self, Auth, GameOver, ToClient},
     network_wrap,
 };
 
