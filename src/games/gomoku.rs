@@ -287,12 +287,14 @@ impl gametraits::GameTrait for Game {
     }
 
     fn try_start_game(&mut self) -> Option<PlayerTurn> {
-        Some(PlayerTurn {
-            token: TurnToken {
-                user: self.players.advance_player().unwrap(),
-            },
-            state: gametraits::to_game_state(&self.board),
-        })
+        if let Some(user) = self.players.advance_player() {
+            Some(PlayerTurn {
+                token: TurnToken { user },
+                state: gametraits::to_game_state(&self.board),
+            })
+        } else {
+            None
+        }
     }
 }
 
