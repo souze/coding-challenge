@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use futures::TryFutureExt;
+use log::debug;
 use log::warn;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
@@ -108,16 +109,16 @@ pub struct FakeStream {
 #[async_trait]
 impl Stream for FakeStream {
     async fn read_line(&mut self) -> Result<String, Error> {
-        println!("Fake stream {} sending reading", self.name);
+        debug!("Fake stream {} sending reading", self.name);
         match self.tx.send(NetworkInteraction::Reading).await {
             Ok(()) => (),
             Err(_) => return Err(Error::ConnectionClosed),
         }
 
-        println!("Fake stream {} waiting for go", self.name);
+        debug!("Fake stream {} waiting for go", self.name);
         match self.rx.recv().await {
             Some(v) => {
-                println!("Test[{}] -> App: {}", self.name, v.trim());
+                debug!("Test[{}] -> App: {}", self.name, v.trim());
                 Ok(v)
             }
             None => Err(Error::ConnectionClosed),
@@ -125,7 +126,7 @@ impl Stream for FakeStream {
     }
 
     async fn write(&mut self, data: &str) -> Result<(), Error> {
-        println!("App -> Test[{}]: {}", self.name, data.trim());
+        debug!("App -> Test[{}]: {}", self.name, data.trim());
         match self
             .tx
             .send(NetworkInteraction::Sending(data.to_string()))

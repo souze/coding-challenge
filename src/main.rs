@@ -101,7 +101,6 @@ mod test {
 
     #[tokio::test]
     async fn test_two_player_flow() {
-        env_logger::init();
         init_flow_test_spawn!(driver, test_entry);
 
         let mut user = driver.connect_user("zeldo").await;
@@ -252,9 +251,10 @@ mod test {
         let mut p1 = driver.connect_user("player1").await;
         let mut p2 = driver.connect_user("player2").await;
         driver.send(&mut p1, &login_msg("player1", "pass")).await;
+        driver.receive_anything(&mut p1).await;
+
         driver.send(&mut p2, &login_msg("player2", "pass")).await;
 
-        driver.receive_anything(&mut p1).await;
         driver.send(&mut p1, r#"{"move":{"x":5,"y":5}}"#).await;
 
         driver.receive_anything(&mut p2).await;
@@ -312,7 +312,6 @@ mod test {
 
     #[tokio::test]
     async fn two_players_passive_drops() {
-        env_logger::init();
         init_flow_test_spawn!(driver, test_entry);
 
         let mut user = driver.connect_user("user").await;
@@ -350,7 +349,6 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_two_player_flow_with_ui() {
-        env_logger::init();
         init_flow_test_spawn!(driver, test_entry_with_ui);
 
         let mut user = driver.connect_user("zeldo").await;

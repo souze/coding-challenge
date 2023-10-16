@@ -94,15 +94,15 @@ fn player_info_to_user(info: &PlayerInfo) -> User {
 //      - If there are players playing, wait for move
 // 2. Perform function based on message
 //      - PlayerConnected
-///         - If we should start a game, send it's your turn to move
-///     - PlayerDisconnected
-///         - If it's the current player??
-///     - Move
-///         - Move and check result
-///         - Advance player
-///     - Setting changed
-///         - Update setting
-/// 3. Update UI
+//         - If we should start a game, send it's your turn to move
+//     - PlayerDisconnected
+//         - If it's the current player??
+//     - Move
+//         - Move and check result
+//         - Advance player
+//     - Setting changed
+//         - Update setting
+// 3. Update UI
 pub async fn controller_loop(
     from_player_rx: &mut mpsc::Receiver<ControllerMsg>,
     ui_sender: UiSender,
@@ -238,15 +238,20 @@ pub async fn controller_loop(
                 .await
                 {
                     PlayerMovesReturn::None => {
-                        // No more players, or suddenly gating
+                        debug!("Move result: No more players, or suddenly gating");
                         p_move_rx = None;
                         turn_token = None;
                     }
                     PlayerMovesReturn::NextMoveReceiver(receiver, token) => {
+                        debug!(
+                            "Move result: keep going, next player: {:?}",
+                            token.user.name
+                        );
                         p_move_rx = Some(receiver);
                         turn_token = Some(token);
                     }
                     PlayerMovesReturn::GameOver => {
+                        debug!("Move result: Game over");
                         tokio::time::sleep(controller_info.windelay).await;
                         game = game_maker(players.iter().map(player_info_to_user).collect());
                         (p_move_rx, turn_token) = option_tuple_to_tuple_options(

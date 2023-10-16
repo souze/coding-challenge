@@ -19,4 +19,5 @@ log = "*"
 arr_macro = "*"
 itertools = "*"
 rand = "*"
-code-challenge-game-types = { git = "https://github.com/souze/code-challenge-game-types.git" }
+code-challenge-game-types = { path = "../game-types" }
+# code-challenge-game-types = { git = "https://github.com/souze/code-challenge-game-types.git" }

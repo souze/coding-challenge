@@ -172,6 +172,7 @@ impl gametraits::GameTrait for Game {
                 }
                 InternalMoveResult::Ok => {
                     let p = self.players.advance_player().unwrap();
+                    debug!("next player: {}", p.name);
                     PlayerMoveResult::Ok(PlayerTurn {
                         token: TurnToken { user: p },
                         state: gametraits::to_game_state(&self.board),
