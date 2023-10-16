@@ -509,3 +509,24 @@ impl ControllerSender {
         });
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn i_wish_test() {
+        // sut.connect_player("p1");
+        // game.expect_try_start(None);
+        // sut.connect_player("p2");
+        // game.expect_try_start(Some(()));
+        // p1.expect_my_move(MakeMove)
+        // game.expect_move(this: p1, next: p2)
+        // p2.expect_my_move(MakeMove)
+        // game.expect_move(this: p2, next: p1)
+        // p1.expect_my_move(NoResponse)
+        // sut.player_disconnects(p1)
+        // game.expect_current_player_disconnected(nextplayer: p2)
+        // p2.expect_my_move(MakeMove)
+        // game.expect_move(p2, p2)
+    }
+}
