@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use itertools::Itertools;
 use std::{any::Any, iter::repeat};
 
@@ -149,8 +150,9 @@ impl Game {
     }
 }
 
+#[async_trait]
 impl gametraits::GameTrait for Game {
-    fn player_moves(
+    async fn player_moves(
         &mut self,
         token: TurnToken,
         player_move: gametraits::PlayerMove,
@@ -195,11 +197,11 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    fn player_connected(&mut self, user: User) {
+    async fn player_connected(&mut self, user: User) {
         self.players.add_player(user);
     }
 
-    fn player_disconnected(&mut self, username: &str) {
+    async fn player_disconnected(&mut self, username: &str) {
         self.players.remove_player(username);
     }
 
@@ -275,7 +277,7 @@ impl gametraits::GameTrait for Game {
         self == other.as_any().downcast_ref::<Game>().unwrap()
     }
 
-    fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
+    async fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
         self.players.remove_player(&player_token.user.name);
 
         match self.players.advance_player() {
@@ -287,7 +289,7 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    fn try_start_game(&mut self) -> Option<PlayerTurn> {
+    async fn try_start_game(&mut self) -> Option<PlayerTurn> {
         if let Some(user) = self.players.advance_player() {
             Some(PlayerTurn {
                 token: TurnToken { user },
@@ -296,6 +298,10 @@ impl gametraits::GameTrait for Game {
         } else {
             None
         }
+    }
+
+    async fn reset(&mut self, users: Vec<User>) {
+        *self = Game::new(self.board.width, self.board.height, users);
     }
 }
 

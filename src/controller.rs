@@ -104,11 +104,10 @@ fn player_info_to_user(info: &PlayerInfo) -> User {
 //         - Update setting
 // 3. Update UI
 pub async fn controller_loop(
-    from_player_rx: &mut mpsc::Receiver<ControllerMsg>,
+    controller_rx: &mut mpsc::Receiver<ControllerMsg>,
     ui_sender: UiSender,
-    game_maker: GamePtrMaker,
+    mut game: Box<dyn GameTrait>,
 ) {
-    let mut game = game_maker(vec![]);
     let mut p_move_rx: Option<oneshot::Receiver<PlayerMoveMsg>> = None;
     let mut turn_token: Option<gametraits::TurnToken> = None;
     let mut players = PlayerTable::new();
@@ -119,7 +118,7 @@ pub async fn controller_loop(
         let event = if let Some(p_move_rx) = &mut p_move_rx {
             debug!("Waiting for move or control Msg");
             select! {
-                v = from_player_rx.recv() => { match v {
+                v = controller_rx.recv() => { match v {
                     Some(msg) => Event::ControllerMsg(msg),
                     None => panic!("Connection accept loop dropped its TX"),
                 }}
@@ -130,7 +129,7 @@ pub async fn controller_loop(
             }
         } else {
             debug!("Waiting for Control Msg");
-            match from_player_rx.recv().await {
+            match controller_rx.recv().await {
                 Some(msg) => Event::ControllerMsg(msg),
                 None => panic!("Connection accept loop dropped its TX"),
             }
@@ -140,10 +139,12 @@ pub async fn controller_loop(
         match event {
             Event::ControllerMsg(ControllerMsg::ImConnected(name, tx)) => {
                 let new_player = players.add_new_player(name, tx);
-                game.player_connected(player_info_to_user(new_player));
+                game.player_connected(player_info_to_user(new_player)).await;
                 if p_move_rx.is_none() {
                     // The game is not running
-                    if let Some(gametraits::PlayerTurn { token, state }) = game.try_start_game() {
+                    if let Some(gametraits::PlayerTurn { token, state }) =
+                        game.try_start_game().await
+                    {
                         (p_move_rx, turn_token) = option_tuple_to_tuple_options(
                             your_turn(&mut players, &mut game, token, state, &controller_info)
                                 .await,
@@ -156,7 +157,7 @@ pub async fn controller_loop(
                     if token.user.name == name {
                         // Current player disconnected
                         if let Some(gametraits::PlayerTurn { token, state }) =
-                            game.current_player_disconnected(token)
+                            game.current_player_disconnected(token).await
                         {
                             (p_move_rx, turn_token) = match your_turn(
                                 &mut players,
@@ -179,7 +180,7 @@ pub async fn controller_loop(
                         // Not the current player disconnected
                         // In some cases, the player might already be out of the game.
                         if players.remove_player(&name) {
-                            game.player_disconnected(&name);
+                            game.player_disconnected(&name).await;
                         }
                         turn_token = Some(token);
                     }
@@ -190,7 +191,9 @@ pub async fn controller_loop(
                     && !matches!(new_mode, GameMode::Gating);
                 controller_info.game_mode = new_mode;
                 if open_gates {
-                    if let Some(gametraits::PlayerTurn { token, state }) = game.try_start_game() {
+                    if let Some(gametraits::PlayerTurn { token, state }) =
+                        game.try_start_game().await
+                    {
                         (p_move_rx, turn_token) = match your_turn(
                             &mut players,
                             &mut game,
@@ -207,7 +210,7 @@ pub async fn controller_loop(
                 }
                 if matches!(controller_info.game_mode, GameMode::Gating) {
                     controller_info.reset_scores();
-                    game = game_maker(vec![]);
+                    game.reset(Vec::new()).await;
 
                     // Drop any incoming moves
                     p_move_rx = None;
@@ -225,7 +228,7 @@ pub async fn controller_loop(
             Event::Move(player_move) => {
                 let token = turn_token.unwrap();
                 let who_moved = token.user.name.clone();
-                let move_result = game.player_moves(token, player_move.mov);
+                let move_result = game.player_moves(token, player_move.mov).await;
                 ui_sender.send_new_state(dyn_clone::clone_box(&*(game)));
                 match react_to_player_move(
                     who_moved,
@@ -253,7 +256,8 @@ pub async fn controller_loop(
                     PlayerMovesReturn::GameOver => {
                         debug!("Move result: Game over");
                         tokio::time::sleep(controller_info.windelay).await;
-                        game = game_maker(players.iter().map(player_info_to_user).collect());
+                        game.reset(players.iter().map(player_info_to_user).collect())
+                            .await;
                         (p_move_rx, turn_token) = option_tuple_to_tuple_options(
                             first_move_new_game(&mut game, &mut controller_info, &mut players)
                                 .await,
@@ -357,7 +361,7 @@ async fn first_move_new_game(
     controller_info: &mut ControllerInfo,
     players: &mut PlayerTable,
 ) -> Option<(oneshot::Receiver<PlayerMoveMsg>, TurnToken)> {
-    match game.try_start_game() {
+    match game.try_start_game().await {
         Some(PlayerTurn { token, state }) => {
             your_turn(players, game, token, state, controller_info).await
         }
@@ -441,7 +445,7 @@ async fn your_turn(
             .is_err()
         {
             // Player network thread dropped their receiver (probably disconnected)
-            match game.current_player_disconnected(turn_token) {
+            match game.current_player_disconnected(turn_token).await {
                 Some(gametraits::PlayerTurn { token, state }) => {
                     p_game_state = state;
                     turn_token = token;

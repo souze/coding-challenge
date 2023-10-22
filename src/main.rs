@@ -24,7 +24,7 @@ async fn main() {
         listener,
         UiSender::Real(ui_handle),
         controller_channel,
-        |players| games::gomoku::make_ptr(15, 15, players),
+        |users| games::gomoku::make_ptr(15, 15, users),
     )
     .await;
 }
@@ -52,7 +52,7 @@ async fn entry(
 ) {
     // let (tx, mut rx) = mpsc::channel::<ControllerMsg>(1024);
     tokio::spawn(async move {
-        controller::controller_loop(&mut rx, update_game_sender, game).await;
+        controller::controller_loop(&mut rx, update_game_sender, game(Vec::new())).await;
     });
 
     user_connection::accept_connection_loop(listener, tx).await;
@@ -272,6 +272,7 @@ mod test {
 
     #[tokio::test]
     async fn win_twice() {
+        env_logger::init();
         init_flow_test_spawn!(driver, test_entry_gomoko);
 
         let mut user = driver.connect_user("zeldo").await;
