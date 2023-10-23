@@ -13,7 +13,7 @@ use log::info;
 use tokio::sync::mpsc;
 
 #[tokio::main]
-async fn main() {
+pub async fn main() {
     env_logger::init();
     let listener = network_wrap::bind("127.0.0.1:7654").await.unwrap();
 

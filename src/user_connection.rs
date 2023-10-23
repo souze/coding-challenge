@@ -16,7 +16,7 @@ use crate::{
 
 type UserPassDb = Arc<Mutex<HashMap<String, String>>>;
 
-pub(crate) async fn accept_connection_loop(
+pub async fn accept_connection_loop(
     mut listener: impl network_wrap::Listener,
     tx: mpsc::Sender<ControllerMsg>,
 ) {
