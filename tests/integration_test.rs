@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 use code_challenge_game_types::gametraits::{
-    self, GameTrait, PlayerMove, PlayerMoveResult, PlayerTurn, TurnToken, User,
+    GameTrait, PlayerMove, PlayerMoveResult, PlayerTurn, TurnToken, User,
 };
 use futures::channel::oneshot;
-use pin_utils::*;
+
 use std::future::Future;
 use std::pin::Pin;
 use tokio::sync::mpsc;
 
-use coding_challenge;
+
 use coding_challenge::controller;
 
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ struct MockGame {
 }
 
 impl PartialEq for MockGame {
-    fn eq(&self, other: &MockGame) -> bool {
+    fn eq(&self, _other: &MockGame) -> bool {
         true
     }
 }
@@ -27,8 +27,8 @@ impl Eq for MockGame {}
 struct TestGame {}
 
 fn make_test_game() -> (TestGame, MockGame) {
-    let (a, b) = mpsc::channel(1);
-    let (c, d) = mpsc::channel(1);
+    let (a, _b) = mpsc::channel(1);
+    let (c, _d) = mpsc::channel(1);
     (
         TestGame {},
         MockGame {
@@ -52,7 +52,7 @@ impl GameTrait for MockGame {
         ret_rx.await.unwrap()
     }
 
-    async fn current_player_disconnected(&mut self, turn_token: TurnToken) -> Option<PlayerTurn> {
+    async fn current_player_disconnected(&mut self, _turn_token: TurnToken) -> Option<PlayerTurn> {
         None
     }
 
@@ -63,11 +63,11 @@ impl GameTrait for MockGame {
     async fn player_connected(&mut self, user: User) {
         self.player_connected_channel.send(user).await;
     }
-    async fn player_disconnected(&mut self, user: &str) {}
+    async fn player_disconnected(&mut self, _user: &str) {}
 
-    async fn reset(&mut self, users: Vec<User>) {}
+    async fn reset(&mut self, _users: Vec<User>) {}
 
-    fn paint(&self, ctx: &mut druid::PaintCtx) {}
+    fn paint(&self, _ctx: &mut druid::PaintCtx) {}
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -130,7 +130,7 @@ impl Sut {
 fn nice_test() {
     assert_eq!(1, 1);
 
-    let (sut, game) = Sut::start();
+    let (_sut, _game) = Sut::start();
 
     // pub type GamePtr = Box<dyn gametraits::GameTrait>;
     // pub type GamePtrMaker = fn(Vec<gametraits::User>) -> GamePtr;

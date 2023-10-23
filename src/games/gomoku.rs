@@ -112,8 +112,7 @@ impl Board {
             .map(|(x, y)| (self.at(x, y), x, y))
             .group_by(|(a, _, _)| *a)
             .into_iter()
-            .map(|(_, b)| b.map(|(_, x, y)| (x, y))) // Discard the key and cell
-            .into_iter()
+            .map(|(_, b)| b.map(|(_, x, y)| (x, y)))
             .map(|a| a.collect::<Vec<(i32, i32)>>())
             .max_by(|a, b| a.len().cmp(&b.len()))
             .and_then(|a| {

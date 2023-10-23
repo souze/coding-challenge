@@ -117,7 +117,7 @@ impl gametraits::GameTrait for Game {
         })
     }
 
-    async fn reset(&mut self, users: Vec<User>) {
+    async fn reset(&mut self, _users: Vec<User>) {
         todo!()
     }
 }

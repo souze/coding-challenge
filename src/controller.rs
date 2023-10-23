@@ -86,7 +86,7 @@ pub enum GameMode {
 fn player_info_to_user(info: &PlayerInfo) -> User {
     User {
         name: info.name.clone(),
-        color: info.color.clone(),
+        color: info.color,
     }
 }
 

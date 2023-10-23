@@ -117,11 +117,11 @@ impl PaintBucket {
 
     fn get(&mut self, name: &String) -> Color {
         match self.taken_paints.get(name) {
-            Some(color) => color.clone(),
+            Some(color) => *color,
             None => {
                 // After all the colors are taken, everyone gets gray
                 let c = self.free_paints.pop().unwrap_or(Color::GRAY);
-                self.taken_paints.insert(name.to_string(), c.clone());
+                self.taken_paints.insert(name.to_string(), c);
                 c
             }
         }

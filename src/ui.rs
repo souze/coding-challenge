@@ -131,7 +131,7 @@ impl AppDelegate<AppData> for Delegate {
                 .iter()
                 .map(|gametraits::User { name, color }| UiUser {
                     name: name.clone(),
-                    color: color.clone(),
+                    color: *color,
                     score: *info.score.get(name).unwrap_or(&0),
                 })
                 .collect();
@@ -212,7 +212,7 @@ fn make_widget_connected_users() -> impl Widget<Vector<UiUser>> {
     Flex::column().with_flex_child(
         widget::Scroll::new(widget::List::new(|| {
             EnvScope::new(
-                |env, UiUser { color, .. }| env.set(druid::theme::TEXT_COLOR, color.clone()),
+                |env, UiUser { color, .. }| env.set(druid::theme::TEXT_COLOR, *color),
                 Label::new(|u: &UiUser, _env: &_| format!("* {} - {}", u.name, u.score))
                     .with_text_size(36.0),
             )
