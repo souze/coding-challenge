@@ -47,12 +47,12 @@ async fn start_ui(controller_tx: mpsc::Sender<ControllerMsg>) -> ExtEventSink {
 async fn entry(
     listener: impl network_wrap::Listener,
     update_game_sender: UiSender,
-    (tx, mut rx): (mpsc::Sender<ControllerMsg>, mpsc::Receiver<ControllerMsg>),
+    (tx, rx): (mpsc::Sender<ControllerMsg>, mpsc::Receiver<ControllerMsg>),
     game: GamePtrMaker,
 ) {
     // let (tx, mut rx) = mpsc::channel::<ControllerMsg>(1024);
     tokio::spawn(async move {
-        controller::controller_loop(&mut rx, update_game_sender, game(Vec::new())).await;
+        controller::controller_loop(rx, update_game_sender, game(Vec::new())).await;
     });
 
     user_connection::accept_connection_loop(listener, tx).await;

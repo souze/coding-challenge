@@ -65,7 +65,7 @@ impl GameTrait for MockGame {
     }
     async fn player_disconnected(&mut self, user: &str) {}
 
-    async fn reset(&mut self) {}
+    async fn reset(&mut self, users: Vec<User>) {}
 
     fn paint(&self, ctx: &mut druid::PaintCtx) {}
 
@@ -93,10 +93,11 @@ impl Sut {
     fn start() -> (Sut, TestGame) {
         let (server_tx, server_rx) = tokio::sync::mpsc::channel::<controller::ControllerMsg>(1);
         let (test_game, server_game) = make_test_game();
+        let boxed_server_game = Box::new(server_game);
         let sut_fut = Box::pin(controller::controller_loop(
-            &mut server_rx,
+            server_rx,
             controller::UiSender::Fake,
-            game_maker,
+            boxed_server_game,
         ));
         let mut sut = Self { server_tx, sut_fut };
         sut.poll();
@@ -125,26 +126,12 @@ impl Sut {
     // }
 }
 
-fn game_maker(_users: Vec<gametraits::User>) -> controller::GamePtr {
-    Box::new(MockGame {})
-}
-
 #[test]
-fn whatever() {
+fn nice_test() {
     assert_eq!(1, 1);
 
-    let (from_player_tx, mut from_player_rx) = mpsc::channel::<controller::ControllerMsg>(1);
+    let (sut, game) = Sut::start();
 
     // pub type GamePtr = Box<dyn gametraits::GameTrait>;
     // pub type GamePtrMaker = fn(Vec<gametraits::User>) -> GamePtr;
-
-    let sut_fut = coding_challenge::controller::controller_loop(
-        &mut from_player_rx,
-        controller::UiSender::Fake,
-        game_maker,
-    );
-
-    let w = futures::task::noop_waker();
-    let mut c = core::task::Context::from_waker(&w);
-    let _ = self.sut_fut.as_mut().poll(&mut c);
 }

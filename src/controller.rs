@@ -104,7 +104,7 @@ fn player_info_to_user(info: &PlayerInfo) -> User {
 //         - Update setting
 // 3. Update UI
 pub async fn controller_loop(
-    controller_rx: &mut mpsc::Receiver<ControllerMsg>,
+    mut controller_rx: mpsc::Receiver<ControllerMsg>,
     ui_sender: UiSender,
     mut game: Box<dyn GameTrait>,
 ) {
