@@ -44,6 +44,10 @@ async fn start_ui(controller_tx: mpsc::Sender<ControllerMsg>) -> ExtEventSink {
     sink
 }
 
+async fn sleep_fn(delay: std::time::Duration) {
+    tokio::time::sleep(delay).await;
+}
+
 async fn entry(
     listener: impl network_wrap::Listener,
     update_game_sender: UiSender,
@@ -52,7 +56,7 @@ async fn entry(
 ) {
     // let (tx, mut rx) = mpsc::channel::<ControllerMsg>(1024);
     tokio::spawn(async move {
-        controller::controller_loop(rx, update_game_sender, game(Vec::new())).await;
+        controller::controller_loop(rx, update_game_sender, game(Vec::new()), &sleep_fn).await;
     });
 
     user_connection::accept_connection_loop(listener, tx).await;

@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::HashMap;
 
 use druid::Color;
@@ -26,7 +27,7 @@ impl PlayerTable {
 
     fn debug_print(&self, msg: &str) {
         let p = &self.players;
-        println!("{p:?}: {msg}")
+        debug!("{p:?}: {msg}");
     }
 
     pub fn is_empty(&self) -> bool {
@@ -73,11 +74,17 @@ impl PlayerTable {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct PlayerInfo {
     pub name: String,
     pub color: druid::Color,
     pub tx: mpsc::Sender<ControllerToPlayerMsg>,
+}
+
+impl std::fmt::Debug for PlayerInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PlayerInfo({}, {:?})", self.name, self.color)
+    }
 }
 
 struct PaintBucket {

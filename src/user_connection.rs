@@ -10,6 +10,7 @@ use code_challenge_game_types::gametraits;
 use code_challenge_game_types::messages::{self, Auth, GameOver, ToClient};
 
 use crate::{
+    controller,
     controller::{ControllerMsg, ControllerToPlayerMsg, GameOverReason, PlayerMoveMsg},
     network_wrap,
 };
@@ -74,10 +75,10 @@ async fn process_user_connection(
             match authorize(&line, &mut user_pass_db) {
                 Ok(name) => {
                     if tx
-                        .send(ControllerMsg::ImConnected(
-                            name.clone(),
-                            player_game_state_tx,
-                        ))
+                        .send(ControllerMsg::ImConnected(controller::ImConnectedMsg {
+                            player_name: name.clone(),
+                            controller_to_player_sender: player_game_state_tx,
+                        }))
                         .await
                         .is_err()
                     {
