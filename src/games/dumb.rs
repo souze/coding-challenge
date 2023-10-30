@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::any::Any;
 
 use code_challenge_game_types::gametraits::{
@@ -30,9 +29,17 @@ pub struct Game {
     players: TurnTracker,
 }
 
-#[async_trait]
+impl Game {
+    pub fn new() -> Self {
+        Game {
+            count: PlayerState { num: 0 },
+            players: TurnTracker::new(Vec::new()),
+        }
+    }
+}
+
 impl gametraits::GameTrait for Game {
-    async fn player_moves(
+    fn player_moves(
         &mut self,
         token: TurnToken,
         player_move: gametraits::PlayerMove,
@@ -61,10 +68,10 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    async fn player_connected(&mut self, user: User) {
+    fn player_connected(&mut self, user: User) {
         self.players.add_player(user);
     }
-    async fn player_disconnected(&mut self, user: &str) {
+    fn player_disconnected(&mut self, user: &str) {
         self.players.remove_player(user);
     }
 
@@ -97,7 +104,7 @@ impl gametraits::GameTrait for Game {
             .map_or(false, |v| v == self)
     }
 
-    async fn current_player_disconnected(&mut self, turn_token: TurnToken) -> Option<PlayerTurn> {
+    fn current_player_disconnected(&mut self, turn_token: TurnToken) -> Option<PlayerTurn> {
         self.players.remove_player(&turn_token.user.name);
         match self.players.advance_player() {
             None => None,
@@ -108,7 +115,7 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    async fn try_start_game(&mut self) -> Option<PlayerTurn> {
+    fn try_start_game(&mut self) -> Option<PlayerTurn> {
         Some(PlayerTurn {
             token: TurnToken {
                 user: self.players.advance_player().unwrap(),
@@ -117,7 +124,7 @@ impl gametraits::GameTrait for Game {
         })
     }
 
-    async fn reset(&mut self, _users: Vec<User>) {
+    fn reset(&mut self, _users: Vec<User>) {
         todo!()
     }
 }

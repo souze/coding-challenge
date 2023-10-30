@@ -1,3 +1,4 @@
+pub mod async_game_trait;
 pub mod controller;
 pub mod games;
 pub mod network_wrap;
@@ -8,8 +9,11 @@ pub mod user_connection;
 use controller::{ControllerMsg, GamePtrMaker, UiSender};
 use druid::ExtEventSink;
 
+use code_challenge_game_types::gametraits::{self, GameTrait};
+use games::gomoku;
 use log::info;
 
+use async_game_trait::{AsyncGame, AsyncGameTrait};
 use tokio::sync::mpsc;
 
 #[tokio::main]
@@ -24,7 +28,7 @@ pub async fn main() {
         listener,
         UiSender::Real(ui_handle),
         controller_channel,
-        |users| games::gomoku::make_ptr(15, 15, users),
+        AsyncGame::make_ptr_from_game(games::gomoku::Game::new(15, 15, Vec::new())),
     )
     .await;
 }
@@ -52,11 +56,10 @@ async fn entry(
     listener: impl network_wrap::Listener,
     update_game_sender: UiSender,
     (tx, rx): (mpsc::Sender<ControllerMsg>, mpsc::Receiver<ControllerMsg>),
-    game: GamePtrMaker,
+    actual_game: Box<dyn AsyncGameTrait>,
 ) {
-    // let (tx, mut rx) = mpsc::channel::<ControllerMsg>(1024);
     tokio::spawn(async move {
-        controller::controller_loop(rx, update_game_sender, game(Vec::new()), &sleep_fn).await;
+        controller::controller_loop(rx, update_game_sender, actual_game, &sleep_fn).await;
     });
 
     user_connection::accept_connection_loop(listener, tx).await;
@@ -75,7 +78,7 @@ mod test {
             fake_listener,
             UiSender::Fake,
             mpsc::channel::<ControllerMsg>(1024),
-            games::dumb::make_ptr,
+            AsyncGame::make_ptr_from_game(games::dumb::Game::new()),
         )
         .await;
     }
@@ -85,7 +88,7 @@ mod test {
             fake_listener,
             UiSender::Fake,
             mpsc::channel::<ControllerMsg>(1024),
-            |players| games::gomoku::make_ptr(20, 20, players),
+            AsyncGame::make_ptr_from_game(games::gomoku::Game::new(20, 20, Vec::new())),
         )
         .await;
     }
@@ -93,9 +96,12 @@ mod test {
     async fn test_entry_with_ui(fake_listener: impl network_wrap::Listener) {
         let (tx, rx) = mpsc::channel::<ControllerMsg>(1024);
         let sink = start_ui(tx.clone()).await;
-        entry(fake_listener, UiSender::Real(sink), (tx, rx), |players| {
-            games::gomoku::make_ptr(20, 20, players)
-        })
+        entry(
+            fake_listener,
+            UiSender::Real(sink),
+            (tx, rx),
+            AsyncGame::make_ptr_from_game(games::gomoku::Game::new(20, 20, Vec::new())),
+        )
         .await;
     }
 

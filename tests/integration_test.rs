@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use code_challenge_game_types::gametraits::{
     GameTrait, PlayerGameState, PlayerMove, PlayerMoveResult, PlayerTurn, TurnToken, User,
 };
+use coding_challenge::async_game_trait::AsyncGameTrait;
 use futures::channel::oneshot;
 use futures::pin_mut;
 
@@ -113,7 +114,7 @@ impl PartialEq for MockGame {
 impl Eq for MockGame {}
 
 #[async_trait]
-impl GameTrait for MockGame {
+impl AsyncGameTrait for MockGame {
     async fn player_moves(
         &mut self,
         turn_token: TurnToken,
@@ -171,6 +172,14 @@ impl GameTrait for MockGame {
 
     fn eq(&self, other: &dyn GameTrait) -> bool {
         self == other.as_any().downcast_ref::<MockGame>().unwrap()
+    }
+
+    fn get_inner(&self) -> Box<dyn GameTrait> {
+        let b = self.game.clone();
+        let c = Box::new(b);
+        let d = &*c;
+        let e = dyn_clone::clone_box(d);
+        e
     }
 }
 

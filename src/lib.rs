@@ -1,3 +1,4 @@
+pub mod async_game_trait;
 pub mod controller;
 pub mod games;
 pub mod network_wrap;

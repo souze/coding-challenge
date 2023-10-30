@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use itertools::Itertools;
 use std::{any::Any, iter::repeat};
 
@@ -136,7 +135,7 @@ enum PlaceResult {
 }
 
 impl Game {
-    fn new(w: usize, h: usize, players: Vec<User>) -> Self {
+    pub fn new(w: usize, h: usize, players: Vec<User>) -> Self {
         Self {
             board: Board {
                 width: w,
@@ -149,9 +148,8 @@ impl Game {
     }
 }
 
-#[async_trait]
 impl gametraits::GameTrait for Game {
-    async fn player_moves(
+    fn player_moves(
         &mut self,
         token: TurnToken,
         player_move: gametraits::PlayerMove,
@@ -196,11 +194,11 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    async fn player_connected(&mut self, user: User) {
+    fn player_connected(&mut self, user: User) {
         self.players.add_player(user);
     }
 
-    async fn player_disconnected(&mut self, username: &str) {
+    fn player_disconnected(&mut self, username: &str) {
         self.players.remove_player(username);
     }
 
@@ -276,7 +274,7 @@ impl gametraits::GameTrait for Game {
         self == other.as_any().downcast_ref::<Game>().unwrap()
     }
 
-    async fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
+    fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
         self.players.remove_player(&player_token.user.name);
 
         match self.players.advance_player() {
@@ -288,7 +286,7 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    async fn try_start_game(&mut self) -> Option<PlayerTurn> {
+    fn try_start_game(&mut self) -> Option<PlayerTurn> {
         if let Some(user) = self.players.advance_player() {
             Some(PlayerTurn {
                 token: TurnToken { user },
@@ -299,7 +297,7 @@ impl gametraits::GameTrait for Game {
         }
     }
 
-    async fn reset(&mut self, users: Vec<User>) {
+    fn reset(&mut self, users: Vec<User>) {
         *self = Game::new(self.board.width, self.board.height, users);
     }
 }

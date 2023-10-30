@@ -1,5 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
+use crate::async_game_trait::AsyncGameTrait;
 use code_challenge_game_types::{
     gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User},
     messages::{self, ToClient},
@@ -18,6 +19,7 @@ use crate::{
 
 pub type GamePtr = Box<dyn gametraits::GameTrait>;
 pub type GamePtrMaker = fn(Vec<gametraits::User>) -> GamePtr;
+// pub type GameMaker = fn(Vec<gametraits::User>) -> impl GameTrait;
 
 pub type ErrorSender = oneshot::Sender<ToClient>;
 
@@ -132,7 +134,7 @@ fn player_info_to_user(info: &PlayerInfo) -> User {
 pub async fn controller_loop<Fut>(
     mut controller_rx: mpsc::Receiver<ControllerMsg>,
     ui_sender: UiSender,
-    mut game: Box<dyn GameTrait>,
+    mut game: Box<dyn AsyncGameTrait>,
     sleep_fn: &impl Fn(std::time::Duration) -> Fut,
 ) where
     Fut: std::future::Future<Output = ()>,
@@ -140,7 +142,7 @@ pub async fn controller_loop<Fut>(
     let mut game_running_data: Option<(oneshot::Receiver<PlayerMoveMsg>, TurnToken)> = None;
     let mut players = PlayerTable::new();
     let mut controller_info = ControllerInfo::default();
-    ui_sender.send_new_state(dyn_clone::clone_box(&*(game)));
+    ui_sender.send_new_state(dyn_clone::clone_box(&*(game.get_inner())));
 
     loop {
         let event = if let Some(p_move_rx) = game_running_data.as_mut().map(|(recv, _)| recv) {
@@ -261,7 +263,7 @@ pub async fn controller_loop<Fut>(
                 let (_, token) = game_running_data.unwrap();
                 let who_moved = token.user.name.clone();
                 let move_result = game.player_moves(token, player_move.mov).await;
-                ui_sender.send_new_state(dyn_clone::clone_box(&*(game)));
+                ui_sender.send_new_state(dyn_clone::clone_box(&*(game.get_inner())));
                 match react_to_player_move(
                     who_moved,
                     move_result,
@@ -358,7 +360,7 @@ impl From<Option<(oneshot::Receiver<PlayerMoveMsg>, TurnToken)>> for PlayerMoves
 }
 
 async fn first_move_new_game<Fut>(
-    game: &mut Box<dyn GameTrait>,
+    game: &mut Box<dyn AsyncGameTrait>,
     controller_info: &mut ControllerInfo,
     players: &mut PlayerTable,
     sleep_fn: &impl Fn(std::time::Duration) -> Fut,
@@ -377,7 +379,7 @@ where
 async fn react_to_player_move<Fut>(
     who_moved: String,
     player_move_result: PlayerMoveResult,
-    game: &mut Box<dyn GameTrait>,
+    game: &mut Box<dyn AsyncGameTrait>,
     controller_info: &mut ControllerInfo,
     players: &mut PlayerTable,
     move_err_tx: oneshot::Sender<messages::ToClient>,
@@ -442,7 +444,7 @@ where
 
 async fn your_turn<Fut>(
     players: &mut PlayerTable,
-    game: &mut Box<dyn GameTrait>,
+    game: &mut Box<dyn AsyncGameTrait>,
     mut turn_token: gametraits::TurnToken,
     mut p_game_state: gametraits::PlayerGameState,
     controller_info: &ControllerInfo,
@@ -489,8 +491,12 @@ pub enum UiSender {
     Fake,
 }
 
+trait Paint {
+    fn paint(&self, ctx: &mut druid::PaintCtx);
+}
+
 impl UiSender {
-    fn send_new_state(&self, p_state: Box<dyn gametraits::GameTrait>) {
+    fn send_new_state(&self, p_state: Box<dyn GameTrait>) {
         debug!("Sending new game state to UI");
         match self {
             UiSender::Real(tx) => Self::real_send_new_state(tx, p_state),
@@ -498,7 +504,7 @@ impl UiSender {
         }
     }
 
-    fn real_send_new_state(tx: &ExtEventSink, p_state: Box<dyn gametraits::GameTrait>) {
+    fn real_send_new_state(tx: &ExtEventSink, p_state: Box<dyn GameTrait>) {
         tx.submit_command(ui::UI_UPDATE_COMMAND, p_state, druid::Target::Global)
             .unwrap();
     }
