@@ -202,9 +202,44 @@ impl gametraits::GameTrait for Game {
         self.players.remove_player(username);
     }
 
-    // fn get_player_state(&self, _user: &User) -> gametraits::PlayerGameState {
-    //     gametraits::to_game_state(&self.board)
-    // }
+    fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
+        self.players.remove_player(&player_token.user.name);
+
+        match self.players.advance_player() {
+            None => None,
+            Some(user) => Some(PlayerTurn {
+                token: TurnToken { user },
+                state: gametraits::to_game_state(&self.board),
+            }),
+        }
+    }
+
+    fn try_start_game(&mut self) -> Option<PlayerTurn> {
+        if let Some(user) = self.players.advance_player() {
+            Some(PlayerTurn {
+                token: TurnToken { user },
+                state: gametraits::to_game_state(&self.board),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn reset(&mut self, users: Vec<User>) {
+        *self = Game::new(self.board.width, self.board.height, users);
+    }
+}
+
+impl gametraits::Paint for Game {
+    fn eq(&self, other: &dyn gametraits::Paint) -> bool {
+        self == gametraits::Paint::as_any(other)
+            .downcast_ref::<Game>()
+            .unwrap()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
     fn paint(&self, ctx: &mut druid::PaintCtx) {
         let cell_width = (ctx.size().width / self.board.width as f64)
@@ -264,41 +299,6 @@ impl gametraits::GameTrait for Game {
                 .unwrap();
             ctx.draw_text(&layout, (100.0, 25.0));
         }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn eq(&self, other: &dyn GameTrait) -> bool {
-        self == other.as_any().downcast_ref::<Game>().unwrap()
-    }
-
-    fn current_player_disconnected(&mut self, player_token: TurnToken) -> Option<PlayerTurn> {
-        self.players.remove_player(&player_token.user.name);
-
-        match self.players.advance_player() {
-            None => None,
-            Some(user) => Some(PlayerTurn {
-                token: TurnToken { user },
-                state: gametraits::to_game_state(&self.board),
-            }),
-        }
-    }
-
-    fn try_start_game(&mut self) -> Option<PlayerTurn> {
-        if let Some(user) = self.players.advance_player() {
-            Some(PlayerTurn {
-                token: TurnToken { user },
-                state: gametraits::to_game_state(&self.board),
-            })
-        } else {
-            None
-        }
-    }
-
-    fn reset(&mut self, users: Vec<User>) {
-        *self = Game::new(self.board.width, self.board.height, users);
     }
 }
 

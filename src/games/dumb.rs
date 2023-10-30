@@ -75,35 +75,6 @@ impl gametraits::GameTrait for Game {
         self.players.remove_player(user);
     }
 
-    // fn get_player_state(&self, _user: &User) -> gametraits::PlayerGameState {
-    //     gametraits::to_game_state(PlayerState { num: self.count })
-    // }
-
-    fn paint(&self, ctx: &mut druid::PaintCtx) {
-        let my_debug_str = format!("num: {:?}", self.count);
-
-        // This is the builder-style way of drawing text.
-        let text = ctx.text();
-        let layout = text
-            .new_text_layout(my_debug_str)
-            .font(FontFamily::SERIF, 24.0)
-            .text_color(Color::rgb8(180, 180, 180))
-            .build()
-            .unwrap();
-        ctx.draw_text(&layout, (100.0, 25.0));
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn eq(&self, other: &dyn GameTrait) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Game>()
-            .map_or(false, |v| v == self)
-    }
-
     fn current_player_disconnected(&mut self, turn_token: TurnToken) -> Option<PlayerTurn> {
         self.players.remove_player(&turn_token.user.name);
         match self.players.advance_player() {
@@ -126,6 +97,32 @@ impl gametraits::GameTrait for Game {
 
     fn reset(&mut self, _users: Vec<User>) {
         todo!()
+    }
+}
+
+impl gametraits::Paint for Game {
+    fn paint(&self, ctx: &mut druid::PaintCtx) {
+        let my_debug_str = format!("num: {:?}", self.count);
+
+        // This is the builder-style way of drawing text.
+        let text = ctx.text();
+        let layout = text
+            .new_text_layout(my_debug_str)
+            .font(FontFamily::SERIF, 24.0)
+            .text_color(Color::rgb8(180, 180, 180))
+            .build()
+            .unwrap();
+        ctx.draw_text(&layout, (100.0, 25.0));
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn eq(&self, other: &dyn gametraits::Paint) -> bool {
+        self == gametraits::Paint::as_any(other)
+            .downcast_ref::<Game>()
+            .unwrap()
     }
 }
 

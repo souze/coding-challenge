@@ -142,7 +142,7 @@ pub async fn controller_loop<Fut>(
     let mut game_running_data: Option<(oneshot::Receiver<PlayerMoveMsg>, TurnToken)> = None;
     let mut players = PlayerTable::new();
     let mut controller_info = ControllerInfo::default();
-    ui_sender.send_new_state(dyn_clone::clone_box(&*(game.get_inner())));
+    ui_sender.send_new_state(game.get_paint());
 
     loop {
         let event = if let Some(p_move_rx) = game_running_data.as_mut().map(|(recv, _)| recv) {
@@ -263,7 +263,7 @@ pub async fn controller_loop<Fut>(
                 let (_, token) = game_running_data.unwrap();
                 let who_moved = token.user.name.clone();
                 let move_result = game.player_moves(token, player_move.mov).await;
-                ui_sender.send_new_state(dyn_clone::clone_box(&*(game.get_inner())));
+                ui_sender.send_new_state(game.get_paint());
                 match react_to_player_move(
                     who_moved,
                     move_result,
@@ -491,12 +491,8 @@ pub enum UiSender {
     Fake,
 }
 
-trait Paint {
-    fn paint(&self, ctx: &mut druid::PaintCtx);
-}
-
 impl UiSender {
-    fn send_new_state(&self, p_state: Box<dyn GameTrait>) {
+    fn send_new_state(&self, p_state: Box<dyn gametraits::Paint>) {
         debug!("Sending new game state to UI");
         match self {
             UiSender::Real(tx) => Self::real_send_new_state(tx, p_state),
@@ -504,7 +500,7 @@ impl UiSender {
         }
     }
 
-    fn real_send_new_state(tx: &ExtEventSink, p_state: Box<dyn GameTrait>) {
+    fn real_send_new_state(tx: &ExtEventSink, p_state: Box<dyn gametraits::Paint>) {
         tx.submit_command(ui::UI_UPDATE_COMMAND, p_state, druid::Target::Global)
             .unwrap();
     }

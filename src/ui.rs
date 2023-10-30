@@ -15,14 +15,14 @@ use crate::controller;
 use crate::controller::{ControllerMsg, ControllerSender};
 use code_challenge_game_types::gametraits;
 
-pub const UI_UPDATE_COMMAND: Selector<Box<dyn gametraits::GameTrait>> = Selector::new("ui_update");
+pub const UI_UPDATE_COMMAND: Selector<Box<dyn gametraits::Paint>> = Selector::new("ui_update");
 pub const UI_UPDATE_CONTROLLER_INFO_COMMAND: Selector<controller::ControllerInfo> =
     Selector::new("ui_update_controller_info");
 
 #[derive(Clone, Lens, Data)]
 struct AppData {
     #[data(same_fn = "games_eq")]
-    game_state: Box<dyn gametraits::GameTrait>,
+    game_state: Box<dyn gametraits::Paint>,
     what: u32,
     controller_settings: ControllerSettings,
     connected_users: Vector<UiUser>,
@@ -71,7 +71,7 @@ impl From<controller::GameMode> for GameMode {
 }
 
 #[allow(clippy::borrowed_box)]
-fn games_eq(left: &Box<dyn gametraits::GameTrait>, right: &Box<dyn gametraits::GameTrait>) -> bool {
+fn games_eq(left: &Box<dyn gametraits::Paint>, right: &Box<dyn gametraits::Paint>) -> bool {
     left.eq(&**right) // Hehe...
 }
 struct GameWidget {}
@@ -269,7 +269,7 @@ pub fn launch(
     info!("Final launch of UI");
     launcher
         .launch(AppData {
-            game_state: crate::games::dumb::make_ptr(vec![]),
+            game_state: Box::new(crate::games::dumb::Game::new()), // crate::games::dumb::make_ptr(vec![]),
             what: 13,
             controller_settings: ControllerSettings::default(),
             connected_users: Vector::new(),

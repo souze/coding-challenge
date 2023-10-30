@@ -19,12 +19,7 @@ pub trait AsyncGameTrait: dyn_clone::DynClone + Send + Debug {
 
     async fn reset(&mut self, users: Vec<User>);
 
-    fn paint(&self, ctx: &mut druid::PaintCtx);
-
-    fn as_any(&self) -> &dyn Any;
-    fn eq(&self, other: &dyn GameTrait) -> bool;
-
-    fn get_inner(&self) -> Box<dyn GameTrait>;
+    fn get_paint(&self) -> Box<dyn Paint>;
 }
 
 #[derive(Debug, Clone)]
@@ -34,7 +29,7 @@ pub struct AsyncGame<T> {
 
 impl<T> AsyncGame<T>
 where
-    T: 'static + GameTrait + Clone,
+    T: 'static + GameTrait + Clone + Paint,
 {
     pub fn new(game: T) -> Self {
         Self { game }
@@ -48,7 +43,7 @@ where
 #[async_trait]
 impl<T> AsyncGameTrait for AsyncGame<T>
 where
-    T: 'static + GameTrait + Clone,
+    T: 'static + GameTrait + Clone + Paint,
 {
     async fn player_moves(
         &mut self,
@@ -76,22 +71,8 @@ where
         self.game.reset(users)
     }
 
-    fn paint(&self, ctx: &mut druid::PaintCtx) {
-        self.game.paint(ctx)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self.game.as_any()
-    }
-    fn eq(&self, other: &dyn GameTrait) -> bool {
-        self.game.eq(other)
-    }
-
-    fn get_inner(&self) -> Box<dyn GameTrait> {
-        let b = self.game.clone();
-        let c = Box::new(b);
-        let d = &*c;
-        let e = dyn_clone::clone_box(d);
+    fn get_paint(&self) -> Box<dyn Paint> {
+        let e = dyn_clone::clone_box(&*Box::new(self.game.clone()));
         e
     }
 }

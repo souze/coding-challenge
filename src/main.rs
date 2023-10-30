@@ -1,3 +1,5 @@
+#![feature(trait_upcasting)]
+
 pub mod async_game_trait;
 pub mod controller;
 pub mod games;
