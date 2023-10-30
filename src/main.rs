@@ -8,11 +8,11 @@ pub mod player_table;
 pub mod ui;
 pub mod user_connection;
 
-use controller::{ControllerMsg, GamePtrMaker, UiSender};
+use controller::{ControllerMsg, UiSender};
 use druid::ExtEventSink;
 
-use code_challenge_game_types::gametraits::{self, GameTrait};
-use games::gomoku;
+
+
 use log::info;
 
 use async_game_trait::{AsyncGame, AsyncGameTrait};

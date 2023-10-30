@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use crate::async_game_trait::AsyncGameTrait;
 use code_challenge_game_types::{
-    gametraits::{self, GameTrait, PlayerMoveResult, PlayerTurn, TurnToken, User},
+    gametraits::{self, PlayerMoveResult, PlayerTurn, TurnToken, User},
     messages::{self, ToClient},
 };
 use druid::ExtEventSink;

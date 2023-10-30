@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use code_challenge_game_types::gametraits::*;
 use dyn_clone;
-use std::{any::Any, fmt::Debug};
+use std::{fmt::Debug};
 
 #[async_trait]
 pub trait AsyncGameTrait: dyn_clone::DynClone + Send + Debug {
@@ -72,7 +72,7 @@ where
     }
 
     fn get_paint(&self) -> Box<dyn Paint> {
-        let e = dyn_clone::clone_box(&*Box::new(self.game.clone()));
-        e
+        
+        dyn_clone::clone_box(&*Box::new(self.game.clone())) as _
     }
 }
