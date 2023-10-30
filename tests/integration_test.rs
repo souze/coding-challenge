@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use code_challenge_game_types::gametraits;
 use code_challenge_game_types::gametraits::{
-    GameTrait, PlayerGameState, PlayerMove, PlayerMoveResult, PlayerTurn, TurnToken, User,
+    PlayerGameState, PlayerMove, PlayerMoveResult, PlayerTurn, TurnToken, User,
 };
 use coding_challenge::async_game_trait::AsyncGameTrait;
 use futures::channel::oneshot;
@@ -164,22 +165,25 @@ impl AsyncGameTrait for MockGame {
         self.reset_sync.register(()).await;
     }
 
-    fn paint(&self, _ctx: &mut druid::PaintCtx) {}
+    fn get_paint(&self) -> Box<dyn gametraits::Paint> {
+        Box::new(FakePainter {})
+    }
+}
+
+#[derive(Debug, Clone)]
+struct FakePainter {}
+
+impl gametraits::Paint for FakePainter {
+    fn paint(&self, _ctx: &mut druid::PaintCtx) {
+        todo!()
+    }
+
+    fn eq(&self, _other: &dyn gametraits::Paint) -> bool {
+        todo!()
+    }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn eq(&self, other: &dyn GameTrait) -> bool {
-        self == other.as_any().downcast_ref::<MockGame>().unwrap()
-    }
-
-    fn get_inner(&self) -> Box<dyn GameTrait> {
-        let b = self.game.clone();
-        let c = Box::new(b);
-        let d = &*c;
-        let e = dyn_clone::clone_box(d);
-        e
+        todo!()
     }
 }
 
