@@ -8,10 +8,9 @@ pub mod player_table;
 pub mod ui;
 pub mod user_connection;
 
+use code_challenge_game_types::gametraits;
 use controller::{ControllerMsg, UiSender};
 use druid::ExtEventSink;
-
-
 
 use log::info;
 
@@ -24,25 +23,30 @@ pub async fn main() {
     let listener = network_wrap::bind("127.0.0.1:7654").await.unwrap();
 
     let controller_channel = mpsc::channel::<ControllerMsg>(1024);
-    let ui_handle = start_ui(controller_channel.0.clone()).await;
+    let async_game = AsyncGame::make_ptr_from_game(games::gomoku::Game::new(15, 15, Vec::new()));
+
+    let ui_handle = start_ui(controller_channel.0.clone(), async_game.get_paint()).await;
 
     entry(
         listener,
         UiSender::Real(ui_handle),
         controller_channel,
-        AsyncGame::make_ptr_from_game(games::gomoku::Game::new(15, 15, Vec::new())),
+        async_game,
     )
     .await;
 }
 
-async fn start_ui(controller_tx: mpsc::Sender<ControllerMsg>) -> ExtEventSink {
+async fn start_ui(
+    controller_tx: mpsc::Sender<ControllerMsg>,
+    game: Box<dyn gametraits::Paint>,
+) -> ExtEventSink {
     let (ui_handle_tx, ui_handle_rx) = tokio::sync::oneshot::channel::<ExtEventSink>();
     let cswr = controller::ControllerSender {
         rt_handle: tokio::runtime::Handle::current(),
         tx: controller_tx,
     };
     std::thread::spawn(move || {
-        ui::launch(ui_handle_tx, cswr);
+        ui::launch(ui_handle_tx, cswr, game);
     });
     info!("Waiting for handle");
     let sink = ui_handle_rx.await.unwrap();
@@ -97,14 +101,10 @@ mod test {
 
     async fn test_entry_with_ui(fake_listener: impl network_wrap::Listener) {
         let (tx, rx) = mpsc::channel::<ControllerMsg>(1024);
-        let sink = start_ui(tx.clone()).await;
-        entry(
-            fake_listener,
-            UiSender::Real(sink),
-            (tx, rx),
-            AsyncGame::make_ptr_from_game(games::gomoku::Game::new(20, 20, Vec::new())),
-        )
-        .await;
+        let async_game =
+            AsyncGame::make_ptr_from_game(games::gomoku::Game::new(20, 20, Vec::new()));
+        let sink = start_ui(tx.clone(), async_game.get_paint()).await;
+        entry(fake_listener, UiSender::Real(sink), (tx, rx), async_game).await;
     }
 
     fn login_msg(user: &str, pass: &str) -> String {

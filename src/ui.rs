@@ -245,6 +245,7 @@ fn make_widget(controller_sender: ControllerSender) -> impl Widget<AppData> {
 pub fn launch(
     handle_tx: tokio::sync::oneshot::Sender<ExtEventSink>,
     controller_sender: ControllerSender,
+    game_state: Box<dyn gametraits::Paint>,
 ) {
     info!("Launching UI");
     let window = WindowDesc::new(make_widget(controller_sender))
@@ -269,7 +270,7 @@ pub fn launch(
     info!("Final launch of UI");
     launcher
         .launch(AppData {
-            game_state: Box::new(crate::games::dumb::Game::new()), // crate::games::dumb::make_ptr(vec![]),
+            game_state,
             what: 13,
             controller_settings: ControllerSettings::default(),
             connected_users: Vector::new(),
