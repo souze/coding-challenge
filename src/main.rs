@@ -8,6 +8,8 @@ pub mod player_table;
 pub mod ui;
 pub mod user_connection;
 
+use games::gomoku;
+
 use code_challenge_game_types::gametraits;
 use controller::{ControllerMsg, UiSender};
 use druid::ExtEventSink;
@@ -23,7 +25,7 @@ pub async fn main() {
     let listener = network_wrap::bind("127.0.0.1:7654").await.unwrap();
 
     let controller_channel = mpsc::channel::<ControllerMsg>(1024);
-    let async_game = AsyncGame::make_ptr_from_game(games::gomoku::Game::new(15, 15, Vec::new()));
+    let async_game = AsyncGame::make_ptr_from_game(gomoku::Game::new(20, 20, Vec::new()));
 
     let ui_handle = start_ui(controller_channel.0.clone(), async_game.get_paint()).await;
 

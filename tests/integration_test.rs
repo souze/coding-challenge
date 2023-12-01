@@ -6,6 +6,7 @@ use code_challenge_game_types::gametraits::{
 use coding_challenge::async_game_trait::AsyncGameTrait;
 use futures::channel::oneshot;
 use futures::pin_mut;
+use simplelog;
 
 use std::cell::RefCell;
 use std::future::Future;
@@ -415,8 +416,6 @@ fn connect_n_players(sut: &mut Sut, game: &mut TestGame, n: usize) -> Vec<Player
 
 #[test]
 fn nice_test() {
-    env_logger::init();
-
     let (mut sut, mut game) = Sut::start();
 
     // Connect Player 1
@@ -490,6 +489,32 @@ fn lots_of_players_before_start() {
     game.expect_move("Player29", "29", PlayerMoveResult::Win);
     game.expect_reset();
     game.expect_try_start_game(None);
+}
+
+#[test]
+fn player_with_same_name_connected_twice() {
+    let _ = simplelog::TermLogger::init(
+        log::LevelFilter::Trace,
+        simplelog::Config::default(),
+        simplelog::TerminalMode::Mixed,
+        simplelog::ColorChoice::Auto,
+    );
+
+    let (mut sut, mut game) = Sut::start();
+
+    let _p1 = sut.connect_player("p1");
+    game.expect_player_connected("p1");
+    game.expect_try_start_game(None);
+
+    let mut p1_v2 = sut.connect_player("p1");
+    let player_rx_fut = p1_v2.rx.recv();
+    pin_mut!(player_rx_fut);
+    let w = futures::task::noop_waker();
+    let mut c = core::task::Context::from_waker(&w);
+    match player_rx_fut.as_mut().poll(&mut c) {
+        Poll::Ready(None) => (),
+        _ => panic!("Server should have dropped the sender"),
+    }
 }
 
 #[test]

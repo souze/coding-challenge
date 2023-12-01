@@ -6,7 +6,7 @@ use code_challenge_game_types::{
     messages::{self, ToClient},
 };
 use druid::ExtEventSink;
-use log::{debug, info};
+use log::{debug, info, warn};
 use tokio::{
     select,
     sync::{mpsc, oneshot},
@@ -171,34 +171,43 @@ pub async fn controller_loop<Fut>(
                 player_name,
                 controller_to_player_sender,
             })) => {
-                let new_player = players.add_new_player(player_name, controller_to_player_sender);
-                game.player_connected(player_info_to_user(new_player)).await;
-                if game_running_data.is_none() {
-                    // The game is not running
-                    if let Some(gametraits::PlayerTurn { token, state }) =
-                        game.try_start_game().await
-                    {
-                        game_running_data = your_turn(
-                            &mut players,
-                            &mut game,
-                            token,
-                            state,
-                            &controller_info,
-                            &sleep_fn,
-                        )
-                        .await;
+                if players.get(&player_name).is_some() {
+                    warn!("Player {player_name} connected twice, rejecting second connection");
+                    drop(controller_to_player_sender); // Not needed, but nice to be explicit about it
+                } else {
+                    let new_player =
+                        players.add_new_player(player_name, controller_to_player_sender);
+                    game.player_connected(player_info_to_user(new_player)).await;
+                    if game_running_data.is_none() {
+                        // The game is not running
+                        if controller_info.game_mode != GameMode::Gating {
+                            if let Some(gametraits::PlayerTurn { token, state }) =
+                                game.try_start_game().await
+                            {
+                                game_running_data = your_turn(
+                                    &mut players,
+                                    &mut game,
+                                    token,
+                                    state,
+                                    &controller_info,
+                                    &sleep_fn,
+                                )
+                                .await;
+                            }
+                        }
                     }
                 }
             }
             Event::ControllerMsg(ControllerMsg::ImDisconnected(name)) => {
+                let was_in_player_table = players.remove_player(&name);
                 if let Some((p_move_rx_2, token)) = game_running_data {
                     if token.user.name == name {
-                        // Current player disconnected
                         if let Some(gametraits::PlayerTurn {
                             token: new_token,
                             state,
                         }) = game.current_player_disconnected(token).await
                         {
+                            debug!("Current player disconnected, but game goes on");
                             game_running_data = your_turn(
                                 &mut players,
                                 &mut game,
@@ -209,13 +218,16 @@ pub async fn controller_loop<Fut>(
                             )
                             .await;
                         } else {
-                            // The game has ended because of the disconnect
+                            debug!("Current player disconnected, game stopped");
                             game_running_data = None;
+                            game.reset(players.iter().map(player_info_to_user).collect())
+                                .await;
                         }
                     } else {
+                        debug!("Not the current player disconnected");
                         // Not the current player disconnected
                         // In some cases, the player might already be out of the game.
-                        if players.remove_player(&name) {
+                        if was_in_player_table {
                             game.player_disconnected(&name).await;
                         }
                         game_running_data = Some((p_move_rx_2, token));
@@ -227,6 +239,7 @@ pub async fn controller_loop<Fut>(
                     && !matches!(new_mode, GameMode::Gating);
                 controller_info.game_mode = new_mode;
                 if open_gates {
+                    debug!("Open the gates");
                     if let Some(gametraits::PlayerTurn { token, state }) =
                         game.try_start_game().await
                     {
@@ -242,6 +255,7 @@ pub async fn controller_loop<Fut>(
                     }
                 }
                 if matches!(controller_info.game_mode, GameMode::Gating) {
+                    debug!("Gating");
                     controller_info.reset_scores();
                     game.reset(players.iter().map(player_info_to_user).collect())
                         .await;
@@ -408,6 +422,7 @@ where
         PlayerMoveResult::InvalidMove(maybe_player_turn) => {
             debug!("Invalid move from player");
             let _ = move_err_tx.send(messages::INVALID_MOVE); // Player might have disconnected, doesn't matter
+            players.remove_player(&who_moved);
             match maybe_player_turn {
                 Some(PlayerTurn { token, state }) => your_turn(
                     players,
@@ -425,6 +440,7 @@ where
         PlayerMoveResult::InvalidFormat(maybe_player_turn) => {
             debug!("Invalid move format");
             move_err_tx.send(messages::INVALID_MESSAGE_FORMAT).unwrap();
+            players.remove_player(&who_moved);
             match maybe_player_turn {
                 Some(PlayerTurn { token, state }) => your_turn(
                     players,

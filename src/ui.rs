@@ -209,16 +209,13 @@ fn make_settings_widget(controller_sender: ControllerSender) -> impl Widget<Cont
 }
 
 fn make_widget_connected_users() -> impl Widget<Vector<UiUser>> {
-    Flex::column().with_flex_child(
-        widget::Scroll::new(widget::List::new(|| {
-            EnvScope::new(
-                |env, UiUser { color, .. }| env.set(druid::theme::TEXT_COLOR, *color),
-                Label::new(|u: &UiUser, _env: &_| format!("* {} - {}", u.name, u.score))
-                    .with_text_size(36.0),
-            )
-        })),
-        1.0,
-    )
+    Flex::column().with_child(widget::Scroll::new(widget::List::new(|| {
+        EnvScope::new(
+            |env, UiUser { color, .. }| env.set(druid::theme::TEXT_COLOR, *color),
+            Label::new(|u: &UiUser, _env: &_| format!("* {} - {}", u.name, u.score))
+                .with_text_size(36.0),
+        )
+    })))
 }
 
 fn make_widget_game_mode() -> impl Widget<GameMode> {
